@@ -61,3 +61,6 @@ I am not responsible for any damage, injury, or consequences that may result fro
 - [ ] Winterization
 - [ ] Move the automation to ESP?
 - [ ] Integrate flow meter
+
+## Contributing
+Feel free to fork this repository and contribute by submitting pull requests.
