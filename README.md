@@ -46,3 +46,18 @@
 ## Disclaimer
 
 I am not responsible for any damage, injury, or consequences that may result from attempting to replicate or modify this project. Working with electricity can be dangerous, and it is important to take proper precautions. If you are not familiar with electrical wiring or unsure about any part of this project, consult a qualified electrician before proceeding. Always follow local electrical codes and safety guidelines.
+
+## TODOs
+
+- [ ] Yaml example
+- [ ] Home Assistant automation
+- [ ] The math behind irrigation duration
+- [ ] Home Assistant dashboard
+- [ ] Connection diagrams
+- [ ] References
+- [ ] The installation process
+- [ ] References for pipe sizing, cable sizing
+- [ ] Challanges
+- [ ] Winterization
+- [ ] Move the automation to ESP?
+- [ ] Integrate flow meter
