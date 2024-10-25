@@ -47,8 +47,48 @@
 
 I am not responsible for any damage, injury, or consequences that may result from attempting to replicate or modify this project. Working with electricity can be dangerous, and it is important to take proper precautions. If you are not familiar with electrical wiring or unsure about any part of this project, consult a qualified electrician before proceeding. Always follow local electrical codes and safety guidelines.
 
+## Connection Diagram
+
+An extremely simplified ASCII connection diagrams.
+
+### With pump and up to 7 zones
+
+I have 1KW pump and I don't trust the puny relays on the board, so I use contactor to actually toggle the pump. 
+
+The contactor is connected to `NO1` output, so in YAML, on the switch `relay_1` we will have a control of the pump.  
+The transformer's Neutral is on its own bus bar, and Live output is linked on `COM2` through `COM8`. I just made a simple daisy chained link.  
+Valves (zones) then are connected to the `NO2` through `NO8` and Neutral. This means, that we now have control of each zone on `relay_2`, `relay_3` and so on through `relay_8`.
+
+[https://asciiflow.com/#/share/eJylVUFvmzAU%2FiuWr6siEWlr11tCqg1pIZHSceLCOm%2BLRqAy0DaqKkVoxx04WCmHHHPsadop2q%2Fhl8yEODbBBpJaRLHx8%2Fu%2B973H8yP0nBmCl%2FBqMv7ozxAwMJ5%2Bd8Kp74H7afgDjKPZLTyDrjNHmJo92vAO4YBu2%2FCye2bDB%2Fr%2F%2Fl0%2Bm%2BdvLs7pLEQPIV3YEJRGTwefDOsKGCbIyO%2BMLNRPUpyomCVAPmzbk73OSLx3stzovhc6N6GPM7KSgC43eazbIydgxPRHlAEt%2F2QkZfYHZulJeCuZWirqVb9NCZClRIi0UPSfzO5vbaLKPBiLteHdRiEY6v1dJM%2B%2FmDQFXqyPhhrdMEdaqyi3vmMgT3Tds2ZC5pi0XrDvugirMNupmGzZrHiN8UCrDNPaOqotGcpyjFEQRBgVq9epUBdewjGlJsJ%2BPEFe4GO2ErXgAm8VUX2WWtcC48lnRRgvhdHbnU0sIJe1eb0aqrykHLFAtXS9Dma5wehrbiQyI8XONXa84JuPZ4UoFTdJ26IT%2BXwwBzI%2BL3s%2BX1zn5mduxvjUhVtblbJAmlpkyuTb94M5cl3%2FHgx61z3GRzHotlnM8rtlj3Ro09SgBTL1aITLpipG3rYaE5UwbqWhZFDyWGq%2FiVDy0vZ1JE5soijEjiu4BEJy3%2BTfpGFysKN896MA9B1c9i3mLa9XdgUc45lUUlGqzDKOpYHeQGc4i0pX5ThtL0vualHxKYnycCHBjS3HvUMB0DqdzrmkrmUFTfvqaNilBy6a%2Fbf7xCVxHfuszdGOUgOnFuOkC9KGT%2FDpPwop1eY%3D)]: #
+```
+              AC LIVE IN ┌─────────┐      ┌────┐                       
+                    │  ┌─►Contactor├──────►Pump│                       
+                    │  │ └────────▲┘      └────┘                       
+                    │  ├───┐      │                                    
+  ┌───────────────┐ │  │ ┌─▼──────┴─┐                                  
+┌─┤Input MCB      ◄─┘  │ │COM1   NO1│                                  
+│ ├───────────────┤    │ │Controller│                     ┌───────────┐
+├─►Pump MCB       ├────┘ └──────────┘                     │Pressure   │
+│ ├───────────────┤      ┌───────┐        ┌──────┐        │Sensor     │
+├─►Controller MCB ├──────►12V PSU├──────┬─►5V PSU│        │           │
+│ ├───────────────┤      └───────┘      │ │   VCC├────────►red VCC    │
+└─►Transformer MCB├────┐ ┌───────────┐  │ │   GND├─────┬──►black GND  │
+  └───────────────┘    └─►Transformer│  │ └──────┘     │┌─┤yellow DATA│
+                         │N      LIVE│  │              ││ └───────────┘
+                         └┬────────┬─┘  │ ┌──────────┐ ││              
+                      ┌───▼───┐    │    │ │Controller│ ││              
+                      │Neutral│    │    └─►+12V IN   │ ││              
+                      │Bus Bar│    │      │       GND◄─┘│              
+                      └───┬───┘    │      │    V1 ADC◄──┘              
+       ┌────────────◄─────┘        │      │          │                 
+       │Valves 1...7│              └──────►COM2...8  │                 
+       └────────────◄─────────────────────┤NO2...8   │                 
+                                          └──────────┘                 
+```
+
 ## TODOs
 
+- [ ] Rain sensor
 - [ ] Yaml example
 - [ ] Home Assistant automation
 - [ ] The math behind irrigation duration
