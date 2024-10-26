@@ -1,0 +1,969 @@
+esphome:
+  name: "irrigator"
+  friendly_name: Irrigator
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Preserve flash
+preferences:
+  flash_write_interval: 10min
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption
+  services:
+    - service: update_cycle_time
+      then:
+        - component.update: sprinklers_cycle_time
+        - component.update: drippers_cycle_time
+        - delay: 1s
+        - homeassistant.event:
+            event: esphome.irrigator_cycle_time_updated
+            data:
+              sprinklers: !lambda return id(sprinklers_cycle_time).state;
+              drippers: !lambda return id(drippers_cycle_time).state;
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: True
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Irrigator"
+    password: !secret ap_password
+
+captive_portal:
+
+globals:
+  # Precipitation total value
+  - id: precipitation_var
+    type: float
+    restore_value: true
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+# Automatic start of controllers
+datetime:
+  - platform: template
+    id: sprinklers_start
+    name: "Sprinklers Start"
+    type: time
+    optimistic: yes
+    initial_value: "06:00:00"
+    restore_value: true
+    on_time:
+      then:
+        - if:
+            condition:
+              switch.is_on: autostart_sprinklers
+            then:
+              - sprinkler.start_full_cycle: controller
+              - homeassistant.event:
+                  event: esphome.irrigation_controller_started
+                  data:
+                    controller: sprinklers
+
+  - platform: template
+    id: drippers_start
+    name: "Drippers Start"
+    type: time
+    optimistic: yes
+    initial_value: "10:00:00"
+    restore_value: true
+    on_time:
+      then:
+        - if:
+            condition:
+              switch.is_on: autostart_drippers
+            then:
+              - sprinkler.start_full_cycle: drippers_controller
+              - homeassistant.event:
+                  event: esphome.irrigation_controller_started
+                  data:
+                    controller: drippers
+
+# Variables
+number:
+  # The current pressure targets
+  - &pressure_target_max
+    platform: template
+    id: pressure_target_max
+    name: "Pressure Target Max"
+    device_class: pressure
+    unit_of_measurement: bar
+    initial_value: 4.5
+    min_value: 0.6
+    max_value: 5
+    step: 0.1
+    optimistic: True
+    restore_value: True
+    mode: box
+    on_value:
+      then:
+        - if:
+            condition:
+              - lambda: !lambda return id(pressure_target_min).state >= x;
+            then:
+              - number.set:
+                  id: pressure_target_min
+                  value: !lambda return x - 0.1;
+
+  - &pressure_target_min
+    platform: template
+    id: pressure_target_min
+    name: "Pressure Target Min"
+    device_class: pressure
+    unit_of_measurement: bar
+    initial_value: 4.0
+    min_value: 0.5
+    max_value: 4.9
+    step: 0.1
+    optimistic: True
+    restore_value: True
+    mode: box
+    on_value:
+      then:
+        - if:
+            condition:
+              - lambda: !lambda return id(pressure_target_max).state <= x;
+            then:
+              - number.set:
+                  id: pressure_target_max
+                  value: !lambda return x + 0.1;
+
+  # Zone pressure targets
+  - <<: *pressure_target_max
+    id: drippers_pressure_target_max
+    name: "Drippers Pressure Target Max"
+    initial_value: 2.2
+    on_value: {}
+
+  - <<: *pressure_target_min
+    id: drippers_pressure_target_min
+    name: "Drippers Pressure Target Min"
+    initial_value: 0.6
+    on_value: {}
+
+  - <<: *pressure_target_max
+    id: zone_1_pressure_target_max
+    name: "Zone 1 Pressure Target Max"
+    initial_value: 4.5
+    on_value: {}
+
+  - <<: *pressure_target_min
+    id: zone_1_pressure_target_min
+    name: "Zone 1 Pressure Target Min"
+    initial_value: 2.5
+    on_value: {}
+
+  - <<: *pressure_target_max
+    id: zone_2_pressure_target_max
+    name: "Zone 2 Pressure Target Max"
+    initial_value: 4.5
+    on_value: {}
+
+  - <<: *pressure_target_min
+    id: zone_2_pressure_target_min
+    name: "Zone 2 Pressure Target Min"
+    initial_value: 2.5
+    on_value: {}
+
+  - <<: *pressure_target_max
+    id: zone_3_pressure_target_max
+    name: "Zone 3 Pressure Target Max"
+    initial_value: 4.5
+    on_value: {}
+
+  - <<: *pressure_target_min
+    id: zone_3_pressure_target_min
+    name: "Zone 3 Pressure Target Min"
+    initial_value: 2.5
+    on_value: {}
+
+  - <<: *pressure_target_max
+    id: zone_4_pressure_target_max
+    name: "Zone 4 Pressure Target Max"
+    initial_value: 4.5
+    on_value: {}
+
+  - <<: *pressure_target_min
+    id: zone_4_pressure_target_min
+    name: "Zone 4 Pressure Target Min"
+    initial_value: 2.5
+    on_value: {}
+
+  - <<: *pressure_target_max
+    id: zone_5_pressure_target_max
+    name: "Zone 5 Pressure Target Max"
+    initial_value: 4.5
+    on_value: {}
+
+  - <<: *pressure_target_min
+    id: zone_5_pressure_target_min
+    name: "Zone 5 Pressure Target Min"
+    initial_value: 2.5
+    on_value: {}
+
+  - <<: *pressure_target_max
+    id: zone_6_pressure_target_max
+    name: "Zone 6 Pressure Target Max"
+    initial_value: 4.5
+    on_value: {}
+
+  - <<: *pressure_target_min
+    id: zone_6_pressure_target_min
+    name: "Zone 6 Pressure Target Min"
+    initial_value: 2.5
+    on_value: {}
+
+  - <<: *pressure_target_max
+    id: manual_pressure_target_max
+    name: "Manual Pressure Target Max"
+    initial_value: 3.5
+    on_value: {}
+
+  - <<: *pressure_target_min
+    id: manual_pressure_target_min
+    name: "Manual Pressure Target Min"
+    initial_value: 2.0
+    on_value: {}
+
+  # Precipitation gauge single tip value
+  - platform: template
+    id: precipitation_tip
+    name: "Rain Gauge Tip"
+    icon: "mdi:water-plus"
+    device_class: precipitation
+    unit_of_measurement: "mm"
+    initial_value: 0.3
+    min_value: 0
+    max_value: 5
+    step: 0.0001
+    optimistic: True
+    restore_value: True
+    mode: box
+
+# Onboard LED
+light:
+  - platform: status_led
+    id: board_led
+    name: "Board LED"
+    pin: GPIO15
+    internal: True
+
+sensor:
+  - platform: uptime
+    name: ESP Uptime
+
+  - platform: wifi_signal
+    name: ESP WiFi Signal
+    update_interval: 60s
+
+  # Pressure sensor voltage
+  - platform: adc
+    id: pressure_v_int
+    name: "Pressure Voltage"
+    device_class: voltage
+    state_class: measurement
+    unit_of_measurement: V
+    accuracy_decimals: 2
+    update_interval: 500ms
+    # 0db is rated up to 950mV (ESP32 side), with the ES32A08 board it means up to 5.0V (0.95 * 0.1887)
+    attenuation: 0db
+    samples: 64
+    pin:
+      number: GPIO32
+      mode:
+        input: true
+    filters:
+      # 0.1887 is the ratio of voltage divider with 43kOhm and 10kOhm resistors in series
+      - lambda: return x / 0.1887;
+      - sliding_window_moving_average:
+          window_size: 3
+          send_every: 2
+      - round: 3
+      - delta: 0.02
+
+  - platform: template
+    id: pressure_int
+    name: "Pressure"
+    device_class: pressure
+    state_class: measurement
+    unit_of_measurement: bar
+    accuracy_decimals: 2
+    lambda: !lambda |-
+      float pressure_v = id(pressure_v_int).state;
+      float psu_v = 5.0;
+      if (pressure_v > 0.54) {
+        return (pressure_v - 0.1 * psu_v) / (0.75 * psu_v) * 10.0;
+      } else {
+        return 0.0;
+      }
+    update_interval: 1s
+    filters:
+      - round: 2
+      - delta: 0.03
+
+  - platform: template
+    id: pressure_avg
+    name: "Pressure Average"
+    internal: True
+    device_class: pressure
+    state_class: measurement
+    unit_of_measurement: bar
+    accuracy_decimals: 2
+    lambda: !lambda return id(pressure_int).state;
+    update_interval: 1s
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 5
+      - round: 3
+      - delta: 0.03
+
+  # Precipitation total sensor
+  - platform: template
+    id: precipitation_total
+    name: "Precipitation Total"
+    device_class: precipitation
+    unit_of_measurement: "mm"
+    state_class: total_increasing
+    accuracy_decimals: 2
+    update_interval: 300s
+    lambda: !lambda return id(precipitation_var);
+
+  # Cycle time for Home Assistant to calculate the time of automations for sprinklers/drippers
+  - platform: template
+    id: sprinklers_cycle_time
+    name: "Sprinklers Cycle Time"
+    icon: "mdi:timer"
+    device_class: duration
+    unit_of_measurement: s
+    lambda: !lambda return id(controller).total_cycle_time_enabled_valves();
+    update_interval: 60s
+    filters:
+      - delta: 0.1
+
+  - platform: template
+    id: drippers_cycle_time
+    name: "Drippers Cycle Time"
+    icon: "mdi:timer"
+    device_class: duration
+    unit_of_measurement: s
+    lambda: !lambda return id(drippers_controller).total_cycle_time_enabled_valves();
+    update_interval: 60s
+    filters:
+      - delta: 0.1
+
+# Controllers
+sprinkler:
+  # Dripper controller
+  - id: drippers_controller
+    multiplier_number:
+      name: "Drippers Multiplier"
+      icon: "mdi:multiplication"
+    pump_start_pump_delay: 2s
+    pump_stop_valve_delay: 60s
+    valves:
+      - valve_switch:
+          name: "Drippers"
+          icon: "mdi:pine-tree-variant"
+          on_turn_on:
+            - number.set:
+                id: pressure_target_max
+                value: !lambda return id(drippers_pressure_target_max).state;
+            - number.set:
+                id: pressure_target_min
+                value: !lambda return id(drippers_pressure_target_min).state;
+        valve_switch_id: relay_8
+        pump_switch_id: pump
+        run_duration_number:
+          id: controller_drippers_run_duration
+          name: "Drippers Run Duration"
+          icon: "mdi:timer"
+          initial_value: 60
+          unit_of_measurement: min
+
+  # Sprinkler controller
+  - id: controller
+    main_switch:
+      id: controller_main_switch
+      name: "Sprinklers"
+      icon: "mdi:sprinkler-variant"
+    auto_advance_switch:
+      id: controller_main_advance
+      name: "Sprinklers Auto Advance"
+      icon: "mdi:transfer-right"
+    repeat_number:
+      id: controller_main_repeat
+      name: "Sprinklers Repeat"
+      icon: "mdi:repeat"
+    multiplier_number:
+      id: controller_main_multiplier
+      name: "Sprinklers Multiplier"
+      icon: "mdi:multiplication"
+    manual_selection_delay: 2s
+    valve_overlap: 3s
+    pump_start_valve_delay: 6s
+    pump_stop_valve_delay: 15s
+    valves:
+      - valve_switch:
+          name: "Zone 1"
+          icon: "mdi:sprinkler"
+          on_turn_on:
+            - number.set:
+                id: pressure_target_max
+                value: !lambda return id(zone_1_pressure_target_max).state;
+            - number.set:
+                id: pressure_target_min
+                value: !lambda return id(zone_1_pressure_target_min).state;
+        enable_switch:
+          name: "Enable Zone 1"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_2
+        pump_switch_id: pump
+        run_duration_number:
+          id: controller_zone_1_run_duration
+          name: "Zone 1 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 2"
+          icon: "mdi:sprinkler"
+          on_turn_on:
+            - number.set:
+                id: pressure_target_max
+                value: !lambda return id(zone_2_pressure_target_max).state;
+            - number.set:
+                id: pressure_target_min
+                value: !lambda return id(zone_2_pressure_target_min).state;
+        enable_switch:
+          name: "Enable Zone 2"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_3
+        pump_switch_id: pump
+        run_duration_number:
+          id: controller_zone_2_run_duration
+          name: "Zone 2 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 3"
+          icon: "mdi:sprinkler"
+          on_turn_on:
+            - number.set:
+                id: pressure_target_max
+                value: !lambda return id(zone_3_pressure_target_max).state;
+            - number.set:
+                id: pressure_target_min
+                value: !lambda return id(zone_3_pressure_target_min).state;
+        enable_switch:
+          name: "Enable Zone 3"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_4
+        pump_switch_id: pump
+        run_duration_number:
+          id: controller_zone_3_run_duration
+          name: "Zone 3 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 4"
+          icon: "mdi:sprinkler"
+          on_turn_on:
+            - number.set:
+                id: pressure_target_max
+                value: !lambda return id(zone_4_pressure_target_max).state;
+            - number.set:
+                id: pressure_target_min
+                value: !lambda return id(zone_4_pressure_target_min).state;
+        enable_switch:
+          name: "Enable Zone 4"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_5
+        pump_switch_id: pump
+        run_duration_number:
+          id: controller_zone_4_run_duration
+          name: "Zone 4 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 5"
+          icon: "mdi:sprinkler"
+          on_turn_on:
+            - number.set:
+                id: pressure_target_max
+                value: !lambda return id(zone_5_pressure_target_max).state;
+            - number.set:
+                id: pressure_target_min
+                value: !lambda return id(zone_5_pressure_target_min).state;
+        enable_switch:
+          name: "Enable Zone 5"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_6
+        pump_switch_id: pump
+        run_duration_number:
+          id: controller_zone_5_run_duration
+          name: "Zone 5 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 6"
+          icon: "mdi:sprinkler"
+          on_turn_on:
+            - number.set:
+                id: pressure_target_max
+                value: !lambda return id(zone_6_pressure_target_max).state;
+            - number.set:
+                id: pressure_target_min
+                value: !lambda return id(zone_6_pressure_target_min).state;
+        enable_switch:
+          name: "Enable Zone 6"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_7
+        pump_switch_id: pump
+        run_duration_number:
+          id: controller_zone_6_run_duration
+          name: "Zone 6 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+# Inputs
+sn74hc165:
+  - id: 'digital_inputs'
+    data_pin: GPIO5
+    clock_pin: GPIO17
+    load_pin: GPIO16
+
+# Individual inputs
+binary_sensor:
+  # Showing in Home Assistant the actual state of the pump
+  - platform: template
+    name: "Pump On"
+    lambda: !lambda return id(pump_real).state;
+    icon: "mdi:pump"
+
+  # Onboard physical buttons
+  - platform: gpio
+    id: key_1
+    pin:
+      number: GPIO18
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+
+  - platform: gpio
+    id: key_2
+    pin:
+      number: GPIO19
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+
+  - platform: gpio
+    id: key_3
+    pin:
+      number: GPIO21
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+
+  - platform: gpio
+    id: key_4
+    pin:
+      number: GPIO23
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+
+  # SWITCH
+  # Allow turning on the pump manually (with pressure control)
+  - platform: gpio
+    id: in_1
+    pin:
+      sn74hc165: 'digital_inputs'
+      number: 0
+      inverted: true
+    filters:
+      - delayed_on: 1s
+      - delayed_off: 100ms
+    on_press:
+      then:
+        - number.set:
+            id: pressure_target_max
+            value: !lambda return id(manual_pressure_target_max).state;
+        - number.set:
+            id: pressure_target_min
+            value: !lambda return id(manual_pressure_target_min).state;
+        - switch.turn_on: pump
+    on_release:
+      then:
+        - switch.turn_off: pump
+
+  # SWITCH
+  # Allow turning on the pump forcefully (without pressure control)
+  - platform: gpio
+    id: in_2
+    pin:
+      sn74hc165: 'digital_inputs'
+      number: 1
+      inverted: true
+    filters:
+      - delayed_on: 1s
+      - delayed_off: 100ms
+    on_press:
+      then:
+        - switch.turn_on: pump_real
+    on_release:
+      then:
+        - switch.turn_off: pump_real
+
+  # BUTTON
+  # Allow pausing (short click) or stopping (1 ~ 3s press) the sprinkler controller
+  - platform: gpio
+    id: in_3
+    pin:
+      sn74hc165: 'digital_inputs'
+      number: 2
+      inverted: true
+    on_click:
+      - min_length: 5ms
+        max_length: 500ms
+        then:
+          - if:
+              condition:
+                - lambda: !lambda return id(controller).paused_valve().has_value() || !id(controller).active_valve().has_value();
+              then:
+                - sprinkler.resume_or_start_full_cycle: controller
+              else:
+                - sprinkler.pause: controller
+      - min_length: 1s
+        max_length: 3s
+        then:
+          - sprinkler.shutdown: controller
+
+  # BUTTON
+  # Allow pausing (short click) or stopping (1 ~ 3s press) the dripper controller
+  - platform: gpio
+    id: in_4
+    pin:
+      sn74hc165: 'digital_inputs'
+      number: 3
+      inverted: true
+    on_click:
+      - min_length: 5ms
+        max_length: 500ms
+        then:
+          - if:
+              condition:
+                - lambda: !lambda return id(drippers_controller).paused_valve().has_value() || !id(drippers_controller).active_valve().has_value();
+              then:
+                - sprinkler.resume_or_start_full_cycle: drippers_controller
+              else:
+                - sprinkler.pause: drippers_controller
+      - min_length: 1s
+        max_length: 3s
+        then:
+          - sprinkler.shutdown: drippers_controller
+
+  # Rain Gauge
+  - platform: gpio
+    id: in_8
+    pin:
+      sn74hc165: 'digital_inputs'
+      number: 7
+      inverted: true
+    filters:
+      - delayed_on_off: 10ms
+    on_release:
+      then:
+        - globals.set:
+            id: precipitation_var
+            value: !lambda return id(precipitation_var) + id(precipitation_tip).state;
+        - component.update: precipitation_total
+
+# Virtual buttons
+button:
+  - platform: restart
+    name: "Restart"
+
+# Outputs
+sn74hc595:
+  - id: 'output_hub'
+    data_pin: GPIO13
+    clock_pin: GPIO27
+    latch_pin: GPIO14
+    oe_pin: GPIO4
+    sr_count: 3
+
+# Switches
+switch:
+  - platform: template
+    id: pump
+    name: "Pump"
+    optimistic: True
+    icon: "mdi:pump"
+    turn_on_action:
+      - script.execute: keep_pressure
+    turn_off_action:
+      - script.execute: stop_pressure
+
+  # DANGER
+  - platform: gpio
+    id: pump_real
+    pin:
+      sn74hc595: 'output_hub'
+      number: 16
+
+  # Other relays
+  - platform: gpio
+    id: relay_2
+    pin:
+      sn74hc595: 'output_hub'
+      number: 17
+  - platform: gpio
+    id: relay_3
+    pin:
+      sn74hc595: 'output_hub'
+      number: 18
+  - platform: gpio
+    id: relay_4
+    pin:
+      sn74hc595: 'output_hub'
+      number: 19
+  - platform: gpio
+    id: relay_5
+    pin:
+      sn74hc595: 'output_hub'
+      number: 20
+  - platform: gpio
+    id: relay_6
+    pin:
+      sn74hc595: 'output_hub'
+      number: 21
+  - platform: gpio
+    id: relay_7
+    pin:
+      sn74hc595: 'output_hub'
+      number: 22
+  - platform: gpio
+    id: relay_8
+    pin:
+      sn74hc595: 'output_hub'
+      number: 23
+
+  # Automation controls
+  - platform: template
+    id: autostart_sprinklers
+    name: "Autostart Sprinklers"
+    icon: "mdi:refresh-auto"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: template
+    id: autostart_drippers
+    name: "Autostart Drippers"
+    icon: "mdi:refresh-auto"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  # Sprinkler programme pause
+  - platform: template
+    id: controller_pause
+    name: "Sprinklers Pause"
+    icon: "mdi:pause"
+    lambda: 'return id(controller).paused_valve().has_value();'
+    turn_on_action:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(controller).active_valve().has_value();'
+            then:
+              - sprinkler.pause: controller
+    turn_off_action:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(controller).paused_valve().has_value();'
+            then:
+              - sprinkler.resume: controller
+
+# Template valves for ability to manually override or just turn on any zone
+valve:
+  - platform: template
+    id: drippers_valve
+    name: "Drippers"
+    device_class: water
+    lambda: |-
+      if (id(relay_8).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_8
+    close_action:
+      - switch.turn_off: relay_8
+
+  - platform: template
+    id: zone_1_valve
+    name: "Zone 1"
+    device_class: water
+    lambda: |-
+      if (id(relay_2).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_2
+    close_action:
+      - switch.turn_off: relay_2
+
+  - platform: template
+    id: zone_2_valve
+    name: "Zone 2"
+    device_class: water
+    lambda: |-
+      if (id(relay_3).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_3
+    close_action:
+      - switch.turn_off: relay_3
+
+  - platform: template
+    id: zone_3_valve
+    name: "Zone 3"
+    device_class: water
+    lambda: |-
+      if (id(relay_4).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_4
+    close_action:
+      - switch.turn_off: relay_4
+
+  - platform: template
+    id: zone_4_valve
+    name: "Zone 4"
+    device_class: water
+    lambda: |-
+      if (id(relay_5).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_5
+    close_action:
+      - switch.turn_off: relay_5
+
+  - platform: template
+    id: zone_5_valve
+    name: "Zone 5"
+    device_class: water
+    lambda: |-
+      if (id(relay_6).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_6
+    close_action:
+      - switch.turn_off: relay_6
+
+  - platform: template
+    id: zone_6_valve
+    name: "Zone 6"
+    device_class: water
+    lambda: |-
+      if (id(relay_7).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_7
+    close_action:
+      - switch.turn_off: relay_7
+
+# Scripts
+script:
+  - id: stop_pressure
+    then:
+      - script.stop: keep_pressure
+      - switch.turn_off: pump_real
+
+  - id: keep_pressure
+    then:
+      - while:
+          condition:
+            # Safety precaution, stop everything if the pressure is above 6 bar
+            - sensor.in_range:
+                id: pressure_int
+                below: 6.0
+          then:
+            - if:
+                condition:
+                  # If pump is on
+                  - switch.is_on: pump_real
+                  - or:
+                      # If the pressure reached defined max
+                      - lambda: !lambda return id(pressure_avg).state >= id(pressure_target_max).state;
+                then:
+                  - switch.turn_off: pump_real
+            - if:
+                condition:
+                  # If pressure reached defined min
+                  - lambda: !lambda return id(pressure_avg).state <= id(pressure_target_min).state;
+                  # And pump is off
+                  - switch.is_off: pump_real
+                then:
+                  - switch.turn_on: pump_real
+            - delay: 1s
+      - switch.turn_off: pump_real

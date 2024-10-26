@@ -10,7 +10,7 @@
 - Can also function completely without Home Assistant or even without network.
 - Separate "controller" logic for drip irrigation, e.g. garden, thujas, plantations.
 - UI switchable logic for everything-automation, without the need to change any code.
-- All mounted in a nice consumer unit on DIN rails.
+- Automatic water pressure control with ability to change the min/max pressure per-zone.
 
 ## Hardware
 
@@ -51,7 +51,7 @@ I am not responsible for any damage, injury, or consequences that may result fro
 
 An extremely simplified ASCII connection diagrams.
 
-### With pump and up to 7 zones
+### With Pump And up to 7 Zones
 
 I have 1KW pump and I don't trust the puny relays on the board, so I use contactor to actually toggle the pump. 
 
@@ -86,12 +86,76 @@ Valves (zones) then are connected to the `NO2` through `NO8` and Neutral. This m
                                           └──────────┘                 
 ```
 
+## How It Works
+
+The most complete example of the ESPHome YAML can be found in [`irrigator-with-pump-2-controllers.yaml`](irrigator-with-pump-2-controllers.yaml). It has:
+- 2 controllers, in my case, sprinkler controller and controller for drip irrigation.
+- 1 pump control.
+- Automatic water pressure control.
+
+### Pressure sensor
+
+In the yaml, I have 3 sensors in total for pressure. 1st is the pressure sensor voltage; 2nd is the pressure in bar; 3rd is the moving average to smooth out the values for pressure control.
+
+We use `0dB` attenuation, which is [rated](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/peripherals/adc.html#adc-attenuation) for `100 mV ~ 950 mV`. Considering, that we have to divide the input voltage by `0.1887`, at 950mV that is the equivalent of ~5V. Our pressure sensor ouputs only up to 4.5V, and that's at 1.2MPa (12 bar), which, we hopefully will never reach. Realistically, most sprinklers are rated up to 5 bar, and drippers up to 2 bar. So we are talking about the range of up to 450mV (~5 bar).
+
+The documentation of the pressure sensor states: `Vout = VCC * (0.75 * Pressure + 0.1)`, from this, we can switch around the numbers and get the pressure formula, which is `Pressure = (Vout - 0.1 * VCC) / (0.75 * VCC)`, this would return the pressure in MPa, so we multiply by `10` to get the bar value.  
+At 0 bar, the pressure sensor floats around 0.4 - 0.54V.
+
+_This is very simplified yaml, check the [full yaml file](irrigator-with-pump-2-controllers.yaml) with all units, device classes, and so on._
+```yaml
+  # Pressure sensor voltage
+  - platform: adc
+    id: pressure_v_int
+    name: "Pressure Voltage"
+    accuracy_decimals: 2
+    update_interval: 500ms
+    # 0db is rated up to 950mV (ESP32 side), with the ES32A08 board it means up to 5.0V (0.95 * 0.1887)
+    attenuation: 0db
+    samples: 64
+    pin:
+      number: GPIO32 # V1 input on the board
+      mode:
+        input: true
+    filters:
+      # 0.1887 is the ratio of voltage divider with 43kΩ and 10kΩ resistors in series
+      # This is same as `x / 10.0 * (10.0 + 43.0)`
+      - lambda: return x / 0.1887;
+      # Our update_interval is 0.5s, and we send every 2 updates, i.e. every second
+      - sliding_window_moving_average:
+          window_size: 3
+          send_every: 2
+      - round: 3
+      # Don't need any higher resolution
+      - delta: 0.02
+
+  # Pressure
+  - platform: template
+    id: pressure_int
+    name: "Pressure"
+    accuracy_decimals: 2
+    lambda: !lambda |-
+      float pressure_v = id(pressure_v_int).state;
+      float psu_v = 5.0;
+      if (pressure_v > 0.54) {
+        return (pressure_v - 0.1 * psu_v) / (0.75 * psu_v) * 10.0;
+      } else {
+        return 0.0;
+      }
+    update_interval: 1s
+    filters:
+      - round: 2
+      - delta: 0.03
+```
+
 ## TODOs
 
+- [ ] Intro
 - [ ] Rain sensor
-- [ ] Yaml example
+- [x] Yaml example
 - [ ] Home Assistant automation
 - [ ] The math behind irrigation duration
+- [x] The math behind pressure sensor
 - [ ] Home Assistant dashboard
 - [ ] Connection diagrams
 - [ ] References
