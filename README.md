@@ -1,6 +1,8 @@
 # ESPHome Irrigation System based on ES32A08 Expansion Board
 
-// TODO: intro
+
+
+![Home Assistant Irrigation Dashboard](images/irrigation-dashboard.jpg)
 
 ## Key Features
 
@@ -11,6 +13,13 @@
 - Separate "controller" logic for drip irrigation, e.g. garden, thujas, plantations.
 - UI switchable logic for everything-automation, without the need to change any code.
 - Automatic water pressure control with ability to change the min/max pressure per-zone.
+
+---
+
+[Hardware](#hardware) | [Required Hardware](#required) | [Required Hardware for Pump Control](#required-for-pump-control) | [Optional Hardware](#optional)  
+[Connection Diagram](#connection-diagram)  
+[How It Works](#how-it-works) | [How Pressure Sensor Works](#pressure-sensor)
+
 
 ## Hardware
 
@@ -59,7 +68,7 @@ The contactor is connected to `NO1` output, so in YAML, on the switch `relay_1` 
 The transformer's Neutral is on its own bus bar, and Live output is linked on `COM2` through `COM8`. I just made a simple daisy chained link.  
 Valves (zones) then are connected to the `NO2` through `NO8` and Neutral. This means, that we now have control of each zone on `relay_2`, `relay_3` and so on through `relay_8`.
 
-[https://asciiflow.com/#/share/eJylVUFvmzAU%2FiuWr6siEWlr11tCqg1pIZHSceLCOm%2BLRqAy0DaqKkVoxx04WCmHHHPsadop2q%2Fhl8yEODbBBpJaRLHx8%2Fu%2B973H8yP0nBmCl%2FBqMv7ozxAwMJ5%2Bd8Kp74H7afgDjKPZLTyDrjNHmJo92vAO4YBu2%2FCye2bDB%2Fr%2F%2Fl0%2Bm%2BdvLs7pLEQPIV3YEJRGTwefDOsKGCbIyO%2BMLNRPUpyomCVAPmzbk73OSLx3stzovhc6N6GPM7KSgC43eazbIydgxPRHlAEt%2F2QkZfYHZulJeCuZWirqVb9NCZClRIi0UPSfzO5vbaLKPBiLteHdRiEY6v1dJM%2B%2FmDQFXqyPhhrdMEdaqyi3vmMgT3Tds2ZC5pi0XrDvugirMNupmGzZrHiN8UCrDNPaOqotGcpyjFEQRBgVq9epUBdewjGlJsJ%2BPEFe4GO2ErXgAm8VUX2WWtcC48lnRRgvhdHbnU0sIJe1eb0aqrykHLFAtXS9Dma5wehrbiQyI8XONXa84JuPZ4UoFTdJ26IT%2BXwwBzI%2BL3s%2BX1zn5mduxvjUhVtblbJAmlpkyuTb94M5cl3%2FHgx61z3GRzHotlnM8rtlj3Ro09SgBTL1aITLpipG3rYaE5UwbqWhZFDyWGq%2FiVDy0vZ1JE5soijEjiu4BEJy3%2BTfpGFysKN896MA9B1c9i3mLa9XdgUc45lUUlGqzDKOpYHeQGc4i0pX5ThtL0vualHxKYnycCHBjS3HvUMB0DqdzrmkrmUFTfvqaNilBy6a%2Fbf7xCVxHfuszdGOUgOnFuOkC9KGT%2FDpPwop1eY%3D)]: #
+<!-- https://asciiflow.com/#/share/eJylVUFvmzAU%2FiuWr6siEWlr11tCqg1pIZHSceLCOm%2BLRqAy0DaqKkVoxx04WCmHHHPsadop2q%2Fhl8yEODbBBpJaRLHx8%2Fu%2B973H8yP0nBmCl%2FBqMv7ozxAwMJ5%2Bd8Kp74H7afgDjKPZLTyDrjNHmJo92vAO4YBu2%2FCye2bDB%2Fr%2F%2Fl0%2Bm%2BdvLs7pLEQPIV3YEJRGTwefDOsKGCbIyO%2BMLNRPUpyomCVAPmzbk73OSLx3stzovhc6N6GPM7KSgC43eazbIydgxPRHlAEt%2F2QkZfYHZulJeCuZWirqVb9NCZClRIi0UPSfzO5vbaLKPBiLteHdRiEY6v1dJM%2B%2FmDQFXqyPhhrdMEdaqyi3vmMgT3Tds2ZC5pi0XrDvugirMNupmGzZrHiN8UCrDNPaOqotGcpyjFEQRBgVq9epUBdewjGlJsJ%2BPEFe4GO2ErXgAm8VUX2WWtcC48lnRRgvhdHbnU0sIJe1eb0aqrykHLFAtXS9Dma5wehrbiQyI8XONXa84JuPZ4UoFTdJ26IT%2BXwwBzI%2BL3s%2BX1zn5mduxvjUhVtblbJAmlpkyuTb94M5cl3%2FHgx61z3GRzHotlnM8rtlj3Ro09SgBTL1aITLpipG3rYaE5UwbqWhZFDyWGq%2FiVDy0vZ1JE5soijEjiu4BEJy3%2BTfpGFysKN896MA9B1c9i3mLa9XdgUc45lUUlGqzDKOpYHeQGc4i0pX5ThtL0vualHxKYnycCHBjS3HvUMB0DqdzrmkrmUFTfvqaNilBy6a%2Fbf7xCVxHfuszdGOUgOnFuOkC9KGT%2FDpPwop1eY%3D) -->
 ```
               AC LIVE IN ┌─────────┐      ┌────┐                       
                     │  ┌─►Contactor├──────►Pump│                       
@@ -147,6 +156,13 @@ _This is very simplified yaml, check the [full yaml file](irrigator-with-pump-2-
       - round: 2
       - delta: 0.03
 ```
+
+## Home Assistant Automations
+
+> [!NOTE]
+> In future, I plan on moving the automation part to ESP32, but for now, it works on the Home Assistant side
+
+
 
 ## TODOs
 
