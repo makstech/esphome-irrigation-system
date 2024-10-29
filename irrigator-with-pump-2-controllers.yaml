@@ -565,7 +565,7 @@ binary_sensor:
   # Showing in Home Assistant the actual state of the pump
   - platform: template
     name: "Pump On"
-    lambda: !lambda return id(pump_real).state;
+    lambda: !lambda return id(relay_1).state;
     icon: "mdi:pump"
 
   # Onboard physical buttons
@@ -650,10 +650,10 @@ binary_sensor:
       - delayed_off: 100ms
     on_press:
       then:
-        - switch.turn_on: pump_real
+        - switch.turn_on: relay_1
     on_release:
       then:
-        - switch.turn_off: pump_real
+        - switch.turn_off: relay_1
 
   # BUTTON
   # Allow pausing (short click) or stopping (1 ~ 3s press) the sprinkler controller
@@ -747,7 +747,7 @@ switch:
 
   # DANGER
   - platform: gpio
-    id: pump_real
+    id: relay_1
     pin:
       sn74hc595: 'output_hub'
       number: 16
@@ -937,7 +937,7 @@ script:
   - id: stop_pressure
     then:
       - script.stop: keep_pressure
-      - switch.turn_off: pump_real
+      - switch.turn_off: relay_1
 
   - id: keep_pressure
     then:
@@ -951,19 +951,19 @@ script:
             - if:
                 condition:
                   # If pump is on
-                  - switch.is_on: pump_real
+                  - switch.is_on: relay_1
                   - or:
                       # If the pressure reached defined max
                       - lambda: !lambda return id(pressure_avg).state >= id(pressure_target_max).state;
                 then:
-                  - switch.turn_off: pump_real
+                  - switch.turn_off: relay_1
             - if:
                 condition:
                   # If pressure reached defined min
                   - lambda: !lambda return id(pressure_avg).state <= id(pressure_target_min).state;
                   # And pump is off
-                  - switch.is_off: pump_real
+                  - switch.is_off: relay_1
                 then:
-                  - switch.turn_on: pump_real
+                  - switch.turn_on: relay_1
             - delay: 1s
-      - switch.turn_off: pump_real
+      - switch.turn_off: relay_1

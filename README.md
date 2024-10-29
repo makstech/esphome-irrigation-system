@@ -1,22 +1,24 @@
-# ESPHome Irrigation System based on ES32A08 Expansion Board
+# ESPHome Irrigation System with ES32A08 Expansion Board
 
+This repository provides a comprehensive example of an irrigation controller utilizing the ESP32, ESPHome, and the ES32A08 expansion board.
 
+This project is currently a work in progress, and more detailed documentation and explanations will be added progressively.
 
 ![Home Assistant Irrigation Dashboard](images/irrigation-dashboard.jpg)
 
 ## Key Features
 
-- Up to 8 zones or 7 zones and a pump.
-- Automatic irrigation scheduling based on sun elevation.
-- Irrigation duration based on actual past precipitation data + forecast. 
-- Can also function completely without Home Assistant or even without network.
+- Supports up to 8 zones, or 7 zones plus a pump control; expandable with RS485 relay boards.
+- Automated irrigation scheduling.
+- Irrigation timing adjusted according to actual rainfall data and weather forecasts.
+- Operational independence from Home Assistant and network connectivity.
 - Separate "controller" logic for drip irrigation, e.g. garden, thujas, plantations.
-- UI switchable logic for everything-automation, without the need to change any code.
-- Automatic water pressure control with ability to change the min/max pressure per-zone.
+- UI allows easy toggling of automation logic without modifying the code.
+- Automatic water pressure control with configurable minimum and maximum thresholds per zone.
 
 ---
 
-[Hardware](#hardware) | [Required Hardware](#required) | [Required Hardware for Pump Control](#required-for-pump-control) | [Optional Hardware](#optional)  
+[Hardware](#hardware) | [Required Hardware](#required) | [Required Hardware for Pump Control](#pump-control-hardware) | [Optional Hardware](#optional)  
 [Connection Diagram](#connection-diagram)  
 [How It Works](#how-it-works) | [How Pressure Sensor Works](#pressure-sensor)
 
@@ -25,32 +27,32 @@
 
 ### Required
 
-- [**ESP32-WROOM-32E or 32UE**](https://s.click.aliexpress.com/e/_DBjuSlX). It **must** be 38-pin version, and ESP32-WROOM-32UE version is recommended to have an external antenna further away from the high(er) voltage cables.  
+- [**ESP32-WROOM-32E or 32UE**](https://s.click.aliexpress.com/e/_DBjuSlX) – The 38-pin version is **mandatory**; the ESP32-WROOM-32UE variant with an external antenna is recommended for better signal quality away from high-voltage cables.  
 ![ESP32-WROOM-32UE](images/esp32-wroom-32ue.jpg)
 
-- [**ES32A08** Expansion Board](https://s.click.aliexpress.com/e/_DE1CWk5) by _eletechsup_. It is a pretty affordable but very fitting board that has plenty of I/O and most importantly, 8 relays. [More about it in my repo]((https://github.com/makstech/esphome-es32a08-expansion-board-example)) specifically about the use of this board with ESPHome.  
+- [**ES32A08** Expansion Board](https://s.click.aliexpress.com/e/_DE1CWk5) by _eletechsup_ – An affordable and well-suited board featuring ample I/O and 8 relay outputs. [Learn more about its integration with ESPHome in my dedicated repository](https://github.com/makstech/esphome-es32a08-expansion-board-example).  
 ![ES32A08](images/es32a08.jpg)
 
-- [**12V Power Supply**](https://s.click.aliexpress.com/e/_DmWa6VJ). This will supply the ES32A08 board. Anything above 1A (10W) is more than sufficient. _Mean Well HDR-15-12_ is a compact option. At this point, I don't remember why, but I bought 60W version.
+- [**12V Power Supply**](https://s.click.aliexpress.com/e/_DmWa6VJ) – Powers the ES32A08 board. 1A (12W) PSU is sufficient. The _Mean Well HDR-15-12_ offers a compact, DIN rail-mountable solution.  
 
-- **24V AC Transformer**. I've bought an encapsulated 230VAC to 24VAC 30VA (1.25A) transformer. Again, a bit overkill but it handles opening up all 7 valves if I need to dump all the water from the system quickly.
+- **24V AC Transformer** – My choice was an encapsulated 230VAC to 24VAC 30VA (1.25A) transformer. A bit overkill but it handles opening up all 7 valves if I need to dump all the water from the system quickly.
 
-- ... and everything releated to the irrigation itself, like 24VAC valves, rotors, drippers, and so on.
+- ... and everything releated to the irrigation itself, like 24VAC valves, rotors, drippers, etc.
 
-### Required for Pump Control
+### Pump Control Hardware
 
-- [**AC Contactor**](https://s.click.aliexpress.com/e/_DmPWcfj). I don't exactly trust the relays on the board to handle a powerful pump. Make sure that the contactor can handle the power of your pump + some overhead and it's NO (Normally Open). It can be toggled by either 12V PSU, or regular AC. I've got the `2P 16A 2NO 230VAC`, which means that it switches 2 Normally Open circuits (Live and Neutral) using 230VAC.
+- [**AC Contactor**](https://s.click.aliexpress.com/e/_DmPWcfj) – To reliably manage a high-power pump. Make sure that the contactor can handle the power of your pump + some overhead. It operates NO (Normally Open) circuits with either 12V DC or regular AC input. I've got the `2P 16A 2NO 230VAC`, which means that it switches 2 Normally Open circuits (Live and Neutral) using 230VAC.
 
-- [**5V Pressure Sensor**](https://s.click.aliexpress.com/e/_DlGBTMD). This will be used to measure the water pressure in the system to then control the pump. It outputs the voltage based on the pressure and with a simple math formula we can get the pressure.  
+- [**5V Pressure Sensor**](https://s.click.aliexpress.com/e/_DlGBTMD) – Monitors water pressure, providing voltage output that translates into pressure readings through a simple calculation.  
 ![5V Pressure Sensor](images/5v-pressure-sensor.jpg)
 
-- [**Step Down Voltage Module from 12V to 5V**](https://s.click.aliexpress.com/e/_DDEQ7e5). Converting 12V from PSU, to 5V that the pressure sensor accepts.
+- [**Step Down Voltage Module from 12V to 5V**](https://s.click.aliexpress.com/e/_DDEQ7e5) – Converts the 12V output from the PSU to 5V for the pressure sensor.  
 
 ### Optional
 
-- [**100 nF Ceramic Capacitor**](https://s.click.aliexpress.com/e/_DDLb1XJ). [**Recommended by Espressif**](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/peripherals/adc.html#minimizing-noise) to minimize the noise in ADC readings.
+- [**100 nF Ceramic Capacitor**](https://s.click.aliexpress.com/e/_DDLb1XJ) – [**Recommended by Espressif**](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/peripherals/adc.html#minimizing-noise) to minimize the noise in ADC readings.
 
-- [**External Antenna with U.FL/IPEX Pigtail**](https://s.click.aliexpress.com/e/_DEGqnTP). For **32UE** ESP32 variant.
+- [**External Antenna with U.FL/IPEX Pigtail**](https://s.click.aliexpress.com/e/_DEGqnTP) – For **32UE** ESP32 variant.
 
 ## Disclaimer
 
@@ -58,15 +60,15 @@ I am not responsible for any damage, injury, or consequences that may result fro
 
 ## Connection Diagram
 
-An extremely simplified ASCII connection diagrams.
+Here’s a really basic explanation and ASCII-style diagram of how things are hooked up.
 
 ### With Pump And up to 7 Zones
 
-I have 1KW pump and I don't trust the puny relays on the board, so I use contactor to actually toggle the pump. 
+I use a 1KW pump, and I woudn't trust the onboard relays, so I've hooked it up to a contactor.  
 
-The contactor is connected to `NO1` output, so in YAML, on the switch `relay_1` we will have a control of the pump.  
-The transformer's Neutral is on its own bus bar, and Live output is linked on `COM2` through `COM8`. I just made a simple daisy chained link.  
-Valves (zones) then are connected to the `NO2` through `NO8` and Neutral. This means, that we now have control of each zone on `relay_2`, `relay_3` and so on through `relay_8`.
+The contactor is wired to `NO1` output, which means in the YAML config, the `relay_1` switch controls the pump.  
+Neutral line from the transformer goes to its own bus bar, and the Live output is connected from `COM2` through `COM8`. I've got them daisy-chained.
+Valves for the zones are connected to `NO2` through `NO8` along with Neutral. This setup allows individual control of each zone from `relay_2` to `relay_8`.
 
 <!-- https://asciiflow.com/#/share/eJylVUFvmzAU%2FiuWr6siEWlr11tCqg1pIZHSceLCOm%2BLRqAy0DaqKkVoxx04WCmHHHPsadop2q%2Fhl8yEODbBBpJaRLHx8%2Fu%2B973H8yP0nBmCl%2FBqMv7ozxAwMJ5%2Bd8Kp74H7afgDjKPZLTyDrjNHmJo92vAO4YBu2%2FCye2bDB%2Fr%2F%2Fl0%2Bm%2BdvLs7pLEQPIV3YEJRGTwefDOsKGCbIyO%2BMLNRPUpyomCVAPmzbk73OSLx3stzovhc6N6GPM7KSgC43eazbIydgxPRHlAEt%2F2QkZfYHZulJeCuZWirqVb9NCZClRIi0UPSfzO5vbaLKPBiLteHdRiEY6v1dJM%2B%2FmDQFXqyPhhrdMEdaqyi3vmMgT3Tds2ZC5pi0XrDvugirMNupmGzZrHiN8UCrDNPaOqotGcpyjFEQRBgVq9epUBdewjGlJsJ%2BPEFe4GO2ErXgAm8VUX2WWtcC48lnRRgvhdHbnU0sIJe1eb0aqrykHLFAtXS9Dma5wehrbiQyI8XONXa84JuPZ4UoFTdJ26IT%2BXwwBzI%2BL3s%2BX1zn5mduxvjUhVtblbJAmlpkyuTb94M5cl3%2FHgx61z3GRzHotlnM8rtlj3Ro09SgBTL1aITLpipG3rYaE5UwbqWhZFDyWGq%2FiVDy0vZ1JE5soijEjiu4BEJy3%2BTfpGFysKN896MA9B1c9i3mLa9XdgUc45lUUlGqzDKOpYHeQGc4i0pX5ThtL0vualHxKYnycCHBjS3HvUMB0DqdzrmkrmUFTfvqaNilBy6a%2Fbf7xCVxHfuszdGOUgOnFuOkC9KGT%2FDpPwop1eY%3D) -->
 ```
@@ -97,21 +99,24 @@ Valves (zones) then are connected to the `NO2` through `NO8` and Neutral. This m
 
 ## How It Works
 
-The most complete example of the ESPHome YAML can be found in [`irrigator-with-pump-2-controllers.yaml`](irrigator-with-pump-2-controllers.yaml). It has:
-- 2 controllers, in my case, sprinkler controller and controller for drip irrigation.
-- 1 pump control.
+You can see a detailed example of the setup in [`irrigator-with-pump-2-controllers.yaml`](irrigator-with-pump-2-controllers.yaml), which includes:
+- Two controllers: one for sprinklers and another for drip irrigation.
+- Pump control.
 - Automatic water pressure control.
 
 ### Pressure sensor
 
-In the yaml, I have 3 sensors in total for pressure. 1st is the pressure sensor voltage; 2nd is the pressure in bar; 3rd is the moving average to smooth out the values for pressure control.
+In the YAML configuration, I manage the water pressure using three sensors:
+1. The first sensor measures the voltage output from the pressure sensor.
+2. The second calculates the actual pressure in bars.
+3. The third uses a moving average to stabilize the readings for consistent pressure control.
 
-We use `0dB` attenuation, which is [rated](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/peripherals/adc.html#adc-attenuation) for `100 mV ~ 950 mV`. Considering, that we have to divide the input voltage by `0.1887`, at 950mV that is the equivalent of ~5V. Our pressure sensor ouputs only up to 4.5V, and that's at 1.2MPa (12 bar), which, we hopefully will never reach. Realistically, most sprinklers are rated up to 5 bar, and drippers up to 2 bar. So we are talking about the range of up to 450mV (~5 bar).
+We're using `0dB` attenuation, suitable for `100 mV ~ 950 mV` as per the [ESP32 ADC guidelines](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/peripherals/adc.html#adc-attenuation). Considering that we have to divide the input voltage by `0.1887`, at 950mV (ESP32 side) that is the equivalent of ~5V (board side). Our pressure sensor ouputs only up to 4.5V, and that's at 1.2MPa (12 bar), which, we hopefully will never reach. Realistically, most sprinklers are rated up to 5 bar, and drippers up to 3 bar. So the typical working range is about 450mV (~5 bar).
 
 The documentation of the pressure sensor states: `Vout = VCC * (0.75 * Pressure + 0.1)`, from this, we can switch around the numbers and get the pressure formula, which is `Pressure = (Vout - 0.1 * VCC) / (0.75 * VCC)`, this would return the pressure in MPa, so we multiply by `10` to get the bar value.  
-At 0 bar, the pressure sensor floats around 0.4 - 0.54V.
+At 0 bar, the pressure sensor floats between 0.4 and 0.54V.
 
-_This is very simplified yaml, check the [full yaml file](irrigator-with-pump-2-controllers.yaml) with all units, device classes, and so on._
+_Check out the [full yaml file](irrigator-with-pump-2-controllers.yaml) for complete details, including all units, device classes, etc._
 ```yaml
   # Pressure sensor voltage
   - platform: adc
