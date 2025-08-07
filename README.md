@@ -20,7 +20,8 @@ This project is currently a work in progress, and more detailed documentation an
 
 [Hardware](#hardware) | [Required Hardware](#required) | [Required Hardware for Pump Control](#pump-control-hardware) | [Optional Hardware](#optional)  
 [Connection Diagram](#connection-diagram)  
-[How It Works](#how-it-works) | [How Pressure Sensor Works](#pressure-sensor)
+[How It Works](#how-it-works) | [How Pressure Sensor Works](#pressure-sensor)  
+[Simple Setup](#simple-setup)
 
 
 ## Hardware
