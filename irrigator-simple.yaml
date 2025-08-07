@@ -1,0 +1,511 @@
+esphome:
+  name: "irrigator"
+  friendly_name: Irrigator
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Preserve flash
+preferences:
+  flash_write_interval: 10min
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption
+  services:
+    - service: update_cycle_time
+      then:
+        - component.update: sprinklers_cycle_time
+        - delay: 1s
+        - homeassistant.event:
+            event: esphome.irrigator_cycle_time_updated
+            data:
+              sprinklers: !lambda return id(sprinklers_cycle_time).state;
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: True
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Irrigator"
+    password: !secret ap_password
+
+captive_portal:
+
+globals:
+  # Precipitation total value
+  - id: precipitation_var
+    type: float
+    restore_value: true
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+# Automatic start of controllers
+datetime:
+  - platform: template
+    id: sprinklers_start
+    name: "Sprinklers Start"
+    type: time
+    optimistic: yes
+    initial_value: "06:00:00"
+    restore_value: true
+    on_time:
+      then:
+        - if:
+            condition:
+              switch.is_on: autostart_sprinklers
+            then:
+              - sprinkler.start_full_cycle: controller
+              - homeassistant.event:
+                  event: esphome.irrigation_controller_started
+                  data:
+                    controller: sprinklers
+
+# Onboard LED
+light:
+  - platform: status_led
+    id: board_led
+    name: "Board LED"
+    pin: GPIO15
+    internal: True
+
+sensor:
+  - platform: uptime
+    name: ESP Uptime
+
+  - platform: wifi_signal
+    name: ESP WiFi Signal
+    update_interval: 60s
+
+  # Cycle time for Home Assistant to calculate the time of automations for sprinklers
+  - platform: template
+    id: sprinklers_cycle_time
+    name: "Sprinklers Cycle Time"
+    icon: "mdi:timer"
+    device_class: duration
+    unit_of_measurement: s
+    lambda: !lambda return id(controller).total_cycle_time_enabled_valves();
+    update_interval: 60s
+    filters:
+      - delta: 0.1
+
+# Controllers
+sprinkler:
+  # Sprinkler controller
+  - id: controller
+    main_switch:
+      id: controller_main_switch
+      name: "Sprinklers"
+      icon: "mdi:sprinkler-variant"
+    auto_advance_switch:
+      id: controller_main_advance
+      name: "Sprinklers Auto Advance"
+      icon: "mdi:transfer-right"
+    repeat_number:
+      id: controller_main_repeat
+      name: "Sprinklers Repeat"
+      icon: "mdi:repeat"
+    multiplier_number:
+      id: controller_main_multiplier
+      name: "Sprinklers Multiplier"
+      icon: "mdi:multiplication"
+    manual_selection_delay: 2s
+    valve_overlap: 3s
+    valves:
+      - valve_switch:
+          name: "Zone 1"
+          icon: "mdi:sprinkler"
+        enable_switch:
+          name: "Enable Zone 1"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_1
+        run_duration_number:
+          id: controller_zone_1_run_duration
+          name: "Zone 1 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 2"
+          icon: "mdi:sprinkler"
+        enable_switch:
+          name: "Enable Zone 2"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_2
+        run_duration_number:
+          id: controller_zone_2_run_duration
+          name: "Zone 2 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 3"
+          icon: "mdi:sprinkler"
+        enable_switch:
+          name: "Enable Zone 3"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_3
+        run_duration_number:
+          id: controller_zone_3_run_duration
+          name: "Zone 3 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 4"
+          icon: "mdi:sprinkler"
+        enable_switch:
+          name: "Enable Zone 4"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_4
+        run_duration_number:
+          id: controller_zone_4_run_duration
+          name: "Zone 4 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 5"
+          icon: "mdi:sprinkler"
+        enable_switch:
+          name: "Enable Zone 5"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_5
+        run_duration_number:
+          id: controller_zone_5_run_duration
+          name: "Zone 5 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 6"
+          icon: "mdi:sprinkler"
+        enable_switch:
+          name: "Enable Zone 6"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_6
+        run_duration_number:
+          id: controller_zone_6_run_duration
+          name: "Zone 6 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 7"
+          icon: "mdi:sprinkler"
+        enable_switch:
+          name: "Enable Zone 7"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_7
+        run_duration_number:
+          id: controller_zone_7_run_duration
+          name: "Zone 7 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+      - valve_switch:
+          name: "Zone 8"
+          icon: "mdi:sprinkler"
+        enable_switch:
+          name: "Enable Zone 8"
+          icon: "mdi:auto-mode"
+        valve_switch_id: relay_8
+        run_duration_number:
+          id: controller_zone_8_run_duration
+          name: "Zone 8 Run Duration"
+          icon: "mdi:timer"
+          initial_value: 5
+          unit_of_measurement: min
+
+# Inputs
+sn74hc165:
+  - id: 'digital_inputs'
+    data_pin: GPIO5
+    clock_pin: GPIO17
+    load_pin: GPIO16
+
+# Individual inputs
+binary_sensor:
+  # Onboard physical buttons
+  - platform: gpio
+    id: key_1
+    pin:
+      number: GPIO18
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+
+  - platform: gpio
+    id: key_2
+    pin:
+      number: GPIO19
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+
+  - platform: gpio
+    id: key_3
+    pin:
+      number: GPIO21
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+
+  - platform: gpio
+    id: key_4
+    pin:
+      number: GPIO23
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      then:
+
+  # BUTTON
+  # Allow pausing (short click) or stopping (1 ~ 3s press) the sprinkler controller
+  - platform: gpio
+    id: in_1
+    pin:
+      sn74hc165: 'digital_inputs'
+      number: 0
+      inverted: true
+    on_click:
+      - min_length: 5ms
+        max_length: 500ms
+        then:
+          - if:
+              condition:
+                - lambda: !lambda return id(controller).paused_valve().has_value() || !id(controller).active_valve().has_value();
+              then:
+                - sprinkler.resume_or_start_full_cycle: controller
+              else:
+                - sprinkler.pause: controller
+      - min_length: 1s
+        max_length: 3s
+        then:
+          - sprinkler.shutdown: controller
+
+# Virtual buttons
+button:
+  - platform: restart
+    name: "Restart"
+
+# Outputs
+sn74hc595:
+  - id: 'output_hub'
+    data_pin: GPIO13
+    clock_pin: GPIO27
+    latch_pin: GPIO14
+    oe_pin: GPIO4
+    sr_count: 3
+
+# Switches
+switch:
+  # Relays for each zone
+  - platform: gpio
+    id: relay_1
+    pin:
+      sn74hc595: 'output_hub'
+      number: 16
+  - platform: gpio
+    id: relay_2
+    pin:
+      sn74hc595: 'output_hub'
+      number: 17
+  - platform: gpio
+    id: relay_3
+    pin:
+      sn74hc595: 'output_hub'
+      number: 18
+  - platform: gpio
+    id: relay_4
+    pin:
+      sn74hc595: 'output_hub'
+      number: 19
+  - platform: gpio
+    id: relay_5
+    pin:
+      sn74hc595: 'output_hub'
+      number: 20
+  - platform: gpio
+    id: relay_6
+    pin:
+      sn74hc595: 'output_hub'
+      number: 21
+  - platform: gpio
+    id: relay_7
+    pin:
+      sn74hc595: 'output_hub'
+      number: 22
+  - platform: gpio
+    id: relay_8
+    pin:
+      sn74hc595: 'output_hub'
+      number: 23
+
+  # Automation controls
+  - platform: template
+    id: autostart_sprinklers
+    name: "Autostart Sprinklers"
+    icon: "mdi:refresh-auto"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  # Sprinkler programme pause
+  - platform: template
+    id: controller_pause
+    name: "Sprinklers Pause"
+    icon: "mdi:pause"
+    lambda: 'return id(controller).paused_valve().has_value();'
+    turn_on_action:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(controller).active_valve().has_value();'
+            then:
+              - sprinkler.pause: controller
+    turn_off_action:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(controller).paused_valve().has_value();'
+            then:
+              - sprinkler.resume: controller
+
+# Template valves for ability to manually override or just turn on any zone
+valve:
+  - platform: template
+    id: zone_1_valve
+    name: "Zone 1"
+    device_class: water
+    lambda: |-
+      if (id(relay_1).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_1
+    close_action:
+      - switch.turn_off: relay_1
+
+  - platform: template
+    id: zone_2_valve
+    name: "Zone 2"
+    device_class: water
+    lambda: |-
+      if (id(relay_2).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_2
+    close_action:
+      - switch.turn_off: relay_2
+
+  - platform: template
+    id: zone_3_valve
+    name: "Zone 3"
+    device_class: water
+    lambda: |-
+      if (id(relay_3).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_3
+    close_action:
+      - switch.turn_off: relay_3
+
+  - platform: template
+    id: zone_4_valve
+    name: "Zone 4"
+    device_class: water
+    lambda: |-
+      if (id(relay_4).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_4
+    close_action:
+      - switch.turn_off: relay_4
+
+  - platform: template
+    id: zone_5_valve
+    name: "Zone 5"
+    device_class: water
+    lambda: |-
+      if (id(relay_5).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_5
+    close_action:
+      - switch.turn_off: relay_5
+
+  - platform: template
+    id: zone_6_valve
+    name: "Zone 6"
+    device_class: water
+    lambda: |-
+      if (id(relay_6).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_6
+    close_action:
+      - switch.turn_off: relay_6
+
+  - platform: template
+    id: zone_7_valve
+    name: "Zone 7"
+    device_class: water
+    lambda: |-
+      if (id(relay_7).state) {
+        return VALVE_OPEN;
+      } else {
+        return VALVE_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay_7
+    close_action:
+      - switch.turn_off: relay_7

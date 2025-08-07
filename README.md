@@ -162,6 +162,18 @@ _Check out the [full yaml file](irrigator-with-pump-2-controllers.yaml) for comp
       - delta: 0.03
 ```
 
+## Simple Setup
+
+If you don’t need pump control or multiple controllers, this simpler configuration might be a better fit. It uses all 8 relays for zone valves and a single sprinkler controller.
+
+You can find the full example YAML in [`irrigator-simple.yaml`](irrigator-simple.yaml). This setup includes:
+
+- Control for 8 irrigation zones using the 8 onboard relays.
+- One standard sprinkler controller.
+- No pump controls.
+
+This is a great starting point if you want a straightforward irrigation controller without extra complexity.
+
 ## Home Assistant Automations
 
 > [!NOTE]
