@@ -11,8 +11,9 @@ esp32:
 preferences:
   flash_write_interval: 10min
 
-# Enable logging
+# Disable hardware logging (necessary when using UART for Modbus)
 logger:
+  baud_rate: 0
 
 # Enable Home Assistant API
 api:
@@ -55,6 +56,21 @@ globals:
 time:
   - platform: homeassistant
     id: homeassistant_time
+
+uart:
+  tx_pin: GPIO1
+  rx_pin: GPIO3
+  baud_rate: 9600
+  stop_bits: 1
+
+modbus:
+  flow_control_pin: GPIO22
+
+modbus_controller:
+  - id: 'pressure_sensor'
+    address: 0x01
+    command_throttle: 100ms
+    update_interval: 2s
 
 # Automatic start of controllers
 datetime:
@@ -273,67 +289,31 @@ sensor:
     name: ESP WiFi Signal
     update_interval: 60s
 
-  # Pressure sensor voltage
-  - platform: adc
-    id: pressure_v_int
-    name: "Pressure Voltage"
-    device_class: voltage
-    state_class: measurement
-    unit_of_measurement: V
-    accuracy_decimals: 2
-    update_interval: 500ms
-    # 0db is rated up to 950mV (ESP32 side), with the ES32A08 board it means up to 5.0V (0.95 * 0.1887)
-    attenuation: 0db
-    samples: 64
-    pin:
-      number: GPIO32
-      mode:
-        input: true
-    filters:
-      # 0.1887 is the ratio of voltage divider with 43kOhm and 10kOhm resistors in series
-      - lambda: return x / 0.1887;
-      - sliding_window_moving_average:
-          window_size: 3
-          send_every: 2
-      - round: 3
-      - delta: 0.02
-
-  - platform: template
-    id: pressure_int
+  # Pressure sensor (RS485/Modbus)
+  # Examples for 5V and 4–20mA variants are in the docs:
+  # https://github.com/makstech/esphome-irrigation-system/blob/main/PRESSURE-SENSORS.md
+  - platform: modbus_controller
+    modbus_controller_id: pressure_sensor
+    id: pressure
     name: "Pressure"
+    address: 0x0004
+    register_type: holding
+    value_type: S_WORD
     device_class: pressure
     state_class: measurement
     unit_of_measurement: bar
     accuracy_decimals: 2
-    lambda: !lambda |-
-      float pressure_v = id(pressure_v_int).state;
-      float psu_v = 5.0;
-      if (pressure_v > 0.54) {
-        return (pressure_v - 0.1 * psu_v) / (0.75 * psu_v) * 10.0;
-      } else {
-        return 0.0;
-      }
-    update_interval: 1s
     filters:
+      - lambda: |-
+          // Sensor returns an integer with 2 implied decimals (MPa or bar equivalent)
+          float v = x * 0.01f;              // e.g. 123 -> 1.23 bar
+          if (v < 0.0f) v = 0.0f;           // clamp to range
+          if (v > 6.0f) v = 6.0f;           // 0–0.6 MPa ≈ 0–6 bar
+          return v;
       - round: 2
-      - delta: 0.03
-
-  - platform: template
-    id: pressure_avg
-    name: "Pressure Average"
-    internal: True
-    device_class: pressure
-    state_class: measurement
-    unit_of_measurement: bar
-    accuracy_decimals: 2
-    lambda: !lambda return id(pressure_int).state;
-    update_interval: 1s
-    filters:
-      - sliding_window_moving_average:
-          window_size: 10
-          send_every: 5
-      - round: 3
-      - delta: 0.03
+      - or:
+          - delta: 0.01
+          - debounce: 5s
 
   # Precipitation total sensor
   - platform: template
@@ -943,27 +923,26 @@ script:
     then:
       - while:
           condition:
-            # Safety precaution, stop everything if the pressure is above 6 bar
+            # Safety precaution, stop everything if the pressure is above 5 bar
             - sensor.in_range:
-                id: pressure_int
-                below: 6.0
+                id: pressure
+                below: 5.0
           then:
             - if:
                 condition:
                   # If pump is on
                   - switch.is_on: relay_1
-                  - or:
-                      # If the pressure reached defined max
-                      - lambda: !lambda return id(pressure_avg).state >= id(pressure_target_max).state;
+                  # If the pressure reached defined max
+                  - lambda: !lambda return id(pressure).state >= id(pressure_target_max).state;
                 then:
                   - switch.turn_off: relay_1
             - if:
                 condition:
-                  # If pressure reached defined min
-                  - lambda: !lambda return id(pressure_avg).state <= id(pressure_target_min).state;
-                  # And pump is off
+                  # If pump is off
                   - switch.is_off: relay_1
+                  # If pressure reached defined min
+                  - lambda: !lambda return id(pressure).state <= id(pressure_target_min).state;
                 then:
                   - switch.turn_on: relay_1
-            - delay: 1s
+            - delay: 2s
       - switch.turn_off: relay_1

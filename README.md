@@ -18,10 +18,20 @@ This project is currently a work in progress, and more detailed documentation an
 
 ---
 
-[Hardware](#hardware) | [Required Hardware](#required) | [Required Hardware for Pump Control](#pump-control-hardware) | [Optional Hardware](#optional)  
-[Connection Diagram](#connection-diagram)  
-[How It Works](#how-it-works) | [How Pressure Sensor Works](#pressure-sensor)  
-[Simple Setup](#simple-setup)
+## Table of contents
+
+- [Hardware](#hardware)
+  - [Required](#required)
+  - [Pump Control Hardware](#pump-control-hardware)
+  - [Optional](#optional)
+- [Disclaimer](#disclaimer)
+- [Connection Diagram](#connection-diagram)
+  - [With Pump And up to 7 Zones](#with-pump-and-up-to-7-zones)
+- [How It Works](#how-it-works)
+  - [Automatic water pressure control](#automatic-water-pressure-control)
+- [Simple Setup](#simple-setup)
+- [Winterization](#winterization)
+- [Contributing](#contributing)
 
 
 ## Hardware
@@ -44,14 +54,11 @@ This project is currently a work in progress, and more detailed documentation an
 
 - [**AC Contactor**](https://s.click.aliexpress.com/e/_DmPWcfj) – To reliably manage a high-power pump. Make sure that the contactor can handle the power of your pump + some overhead. It operates NO (Normally Open) circuits with either 12V DC or regular AC input. I've got the `2P 16A 2NO 230VAC`, which means that it switches 2 Normally Open circuits (Live and Neutral) using 230VAC.
 
-- [**5V Pressure Sensor**](https://s.click.aliexpress.com/e/_DlGBTMD) – Monitors water pressure, providing voltage output that translates into pressure readings through a simple calculation.  
-![5V Pressure Sensor](images/5v-pressure-sensor.jpg)
+- [**Pressure sensor**](PRESSURE-SENSORS.md) – Monitors water pressure. Choosing a sensor that is **correct for your case** is important, and there are many options. Don't be like me and buy three different sensors—try to choose the right one once. See more details in [Pressure sensors](PRESSURE-SENSORS.md).
 
 - [**Step Down Voltage Module from 12V to 5V**](https://s.click.aliexpress.com/e/_DDEQ7e5) – Converts the 12V output from the PSU to 5V for the pressure sensor.  
 
 ### Optional
-
-- [**100 nF Ceramic Capacitor**](https://s.click.aliexpress.com/e/_DDLb1XJ) – [**Recommended by Espressif**](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/peripherals/adc.html#minimizing-noise) to minimize the noise in ADC readings.
 
 - [**External Antenna with U.FL/IPEX Pigtail**](https://s.click.aliexpress.com/e/_DEGqnTP) – For **32UE** ESP32 variant.
 
@@ -71,31 +78,31 @@ The contactor is wired to `NO1` output, which means in the YAML config, the `rel
 Neutral line from the transformer goes to its own bus bar, and the Live output is connected from `COM2` through `COM8`. I've got them daisy-chained.
 Valves for the zones are connected to `NO2` through `NO8` along with Neutral. This setup allows individual control of each zone from `relay_2` to `relay_8`.
 
-<!-- https://asciiflow.com/#/share/eJylVUFvmzAU%2FiuWr6siEWlr11tCqg1pIZHSceLCOm%2BLRqAy0DaqKkVoxx04WCmHHHPsadop2q%2Fhl8yEODbBBpJaRLHx8%2Fu%2B973H8yP0nBmCl%2FBqMv7ozxAwMJ5%2Bd8Kp74H7afgDjKPZLTyDrjNHmJo92vAO4YBu2%2FCye2bDB%2Fr%2F%2Fl0%2Bm%2BdvLs7pLEQPIV3YEJRGTwefDOsKGCbIyO%2BMLNRPUpyomCVAPmzbk73OSLx3stzovhc6N6GPM7KSgC43eazbIydgxPRHlAEt%2F2QkZfYHZulJeCuZWirqVb9NCZClRIi0UPSfzO5vbaLKPBiLteHdRiEY6v1dJM%2B%2FmDQFXqyPhhrdMEdaqyi3vmMgT3Tds2ZC5pi0XrDvugirMNupmGzZrHiN8UCrDNPaOqotGcpyjFEQRBgVq9epUBdewjGlJsJ%2BPEFe4GO2ErXgAm8VUX2WWtcC48lnRRgvhdHbnU0sIJe1eb0aqrykHLFAtXS9Dma5wehrbiQyI8XONXa84JuPZ4UoFTdJ26IT%2BXwwBzI%2BL3s%2BX1zn5mduxvjUhVtblbJAmlpkyuTb94M5cl3%2FHgx61z3GRzHotlnM8rtlj3Ro09SgBTL1aITLpipG3rYaE5UwbqWhZFDyWGq%2FiVDy0vZ1JE5soijEjiu4BEJy3%2BTfpGFysKN896MA9B1c9i3mLa9XdgUc45lUUlGqzDKOpYHeQGc4i0pX5ThtL0vualHxKYnycCHBjS3HvUMB0DqdzrmkrmUFTfvqaNilBy6a%2Fbf7xCVxHfuszdGOUgOnFuOkC9KGT%2FDpPwop1eY%3D) -->
+<!-- https://asciiflow.com/#/share/eJytVbtu2zAU%2FRWCU4rGBuzm4WaL3SAREMtG3XrSIgRsYkCWAkrKA0GAgsiYQQOhevDo0VPRyejX6EtC6mFZEslIaAkJEqXLe8659%2FLyCdrmHMETeDYZXzhzBDSMZ9emN3NscD%2FzbsDYn9%2BCva%2BTg97hB7gPLfMRYWb%2BZMA7hF1mZsCT7r4BH9jz8xF%2Fe%2BRfesfszUMPHpsYEBTG6QBcatMzoOkgoq8R%2FSm%2FgmRFxSwAgmEYtuhzRMnWQ7gZOLZnXnkOjuhSgBhuuOB4SVMAwm4qlRL%2Bjugisy%2BZLZqDLUVBEpKuOn0v6KI07GhMAvlXZPdHnpwiiYzCSrNvfQ8MB%2F1Uw6%2BXLCIJGBmMhh32Qx91xPpqiAliQALEGVddqyyunAgrHOxYFsIyImSMkev6GMWTGHSZ11QuskpkoSwdRZUwnAmyXQenk39TqoqmJKmFWJRU5xGLtcs2XKc7BePJdwnndRMVa%2B6uxR3%2Bt3jI0rIQ6M9WhJtu61z%2FUiBBE7HfsGm7Pxw8T4JSIRYoUlBKhwD6lSF8asXNunWaQqtEKEtNxHnbBkrAS2Z2kAL3t8CSwX7ryRs%2FBmQuSZ0toYahyvJZZ1J32po65CWWUvCCs0KnDFJt2aPSV%2BpDEB35HjatHW9g21rCzUe%2BCzQ9x6nrtu%2B7oG%2Fistu0FrKybuqWVgJfqDSS%2B%2BQjLqSds0AEUfcUS70I9q4AuDopg5Kpad0hF3Ta7faxcPdXKbBWOBp22YLeO87r7VOBoqbXSh%2BlfFSEaozm55YBn%2BHzG23RlSc%3D) -->
 ```
-              AC LIVE IN ┌─────────┐      ┌────┐                       
-                    │  ┌─►Contactor├──────►Pump│                       
-                    │  │ └────────▲┘      └────┘                       
-                    │  ├───┐      │                                    
-  ┌───────────────┐ │  │ ┌─▼──────┴─┐                                  
-┌─┤Input MCB      ◄─┘  │ │COM1   NO1│                                  
-│ ├───────────────┤    │ │Controller│                     ┌───────────┐
-├─►Pump MCB       ├────┘ └──────────┘                     │Pressure   │
-│ ├───────────────┤      ┌───────┐        ┌──────┐        │Sensor     │
-├─►Controller MCB ├──────►12V PSU├──────┬─►5V PSU│        │           │
-│ ├───────────────┤      └───────┘      │ │   VCC├────────►red VCC    │
-└─►Transformer MCB├────┐ ┌───────────┐  │ │   GND├─────┬──►black GND  │
-  └───────────────┘    └─►Transformer│  │ └──────┘     │┌─┤yellow DATA│
-                         │N      LIVE│  │              ││ └───────────┘
-                         └┬────────┬─┘  │ ┌──────────┐ ││              
-                      ┌───▼───┐    │    │ │Controller│ ││              
-                      │Neutral│    │    └─►+12V IN   │ ││              
-                      │Bus Bar│    │      │       GND◄─┘│              
-                      └───┬───┘    │      │    V1 ADC◄──┘              
-       ┌────────────◄─────┘        │      │          │                 
-       │Valves 1...7│              └──────►COM2...8  │                 
-       └────────────◄─────────────────────┤NO2...8   │                 
-                                          └──────────┘                 
+              AC LIVE IN ┌─────────┐      ┌────┐                    
+                    │  ┌─►Contactor├──────►Pump│                    
+                    │  │ └────────▲┘      └────┘                    
+                    │  ├───┐      │                                 
+  ┌───────────────┐ │  │ ┌─▼──────┴─┐                               
+┌─┤Input MCB      ◄─┘  │ │COM1   NO1│                   ┌──────────┐
+│ ├───────────────┤    │ │Controller│                   │Pressure  │
+├─►Pump MCB       ├────┘ └──────────┘                   │Sensor    │
+│ ├───────────────┤      ┌───────┐                      │          │
+├─►Controller MCB ├──────►12V PSU├──────┬──────────────┬►1-12V     │
+│ ├───────────────┤      └───────┘      │              └►2-GND     │
+└─►Transformer MCB├────┐ ┌───────────┐  │              ┌►3-RS485-A │
+  └───────────────┘    └─►Transformer│  │              ├►4-RS485-B │
+                         │N      LIVE│  │              │└──────────┘
+                         └┬────────┬─┘  │ ┌──────────┐ │            
+                      ┌───▼───┐    │    │ │Controller│ │            
+                      │Neutral│    │    ├─►+12V IN   │ │            
+                      │Bus Bar│    │    └─►GND       │ │            
+                      └───┬───┘    │      │     RS485◄─┘            
+       ┌────────────◄─────┘        │      │          │              
+       │Valves 1...7│              └──────►COM2...8  │              
+       └────────────◄─────────────────────┤NO2...8   │              
+                                          └──────────┘              
 ```
 
 ## How It Works
@@ -105,63 +112,22 @@ You can see a detailed example of the setup in [`irrigator-with-pump-2-controlle
 - Pump control.
 - Automatic water pressure control.
 
-### Pressure sensor
+### Automatic water pressure control
 
-In the YAML configuration, I manage the water pressure using three sensors:
-1. The first sensor measures the voltage output from the pressure sensor.
-2. The second calculates the actual pressure in bars.
-3. The third uses a moving average to stabilize the readings for consistent pressure control.
+> Make sure to read the [Pressure sensors](PRESSURE-SENSORS.md) page about choosing the correct pressure sensor.
 
-We're using `0dB` attenuation, suitable for `100 mV ~ 950 mV` as per the [ESP32 ADC guidelines](https://docs.espressif.com/projects/esp-idf/en/v4.4/esp32/api-reference/peripherals/adc.html#adc-attenuation). Considering that we have to divide the input voltage by `0.1887`, at 950mV (ESP32 side) that is the equivalent of ~5V (board side). Our pressure sensor ouputs only up to 4.5V, and that's at 1.2MPa (12 bar), which, we hopefully will never reach. Realistically, most sprinklers are rated up to 5 bar, and drippers up to 3 bar. So the typical working range is about 450mV (~5 bar).
+The YAML configuration implements automatic water pressure control around user-defined targets. Each zone sets a minimum and maximum pressure (`pressure_target_min` / `pressure_target_max` in bar) using template number entities. The core logic lives in the `script.keep_pressure`, which drives the pump relay based on real-time pressure readings.
 
-The documentation of the pressure sensor states: `Vout = VCC * (0.75 * Pressure + 0.1)`, from this, we can switch around the numbers and get the pressure formula, which is `Pressure = (Vout - 0.1 * VCC) / (0.75 * VCC)`, this would return the pressure in MPa, so we multiply by `10` to get the bar value.  
-At 0 bar, the pressure sensor floats between 0.4 and 0.54V.
+Conceptually, the script does the following:
 
-_Check out the [full yaml file](irrigator-with-pump-2-controllers.yaml) for complete details, including all units, device classes, etc._
-```yaml
-  # Pressure sensor voltage
-  - platform: adc
-    id: pressure_v_int
-    name: "Pressure Voltage"
-    accuracy_decimals: 2
-    update_interval: 500ms
-    # 0db is rated up to 950mV (ESP32 side), with the ES32A08 board it means up to 5.0V (0.95 * 0.1887)
-    attenuation: 0db
-    samples: 64
-    pin:
-      number: GPIO32 # V1 input on the board
-      mode:
-        input: true
-    filters:
-      # 0.1887 is the ratio of voltage divider with 43kΩ and 10kΩ resistors in series
-      # This is same as `x / 10.0 * (10.0 + 43.0)`
-      - lambda: return x / 0.1887;
-      # Our update_interval is 0.5s, and we send every 2 updates, i.e. every second
-      - sliding_window_moving_average:
-          window_size: 3
-          send_every: 2
-      - round: 3
-      # Don't need any higher resolution
-      - delta: 0.02
+- Uses the `pressure` sensor as the current system pressure.
+- Enforces a hard safety limit: if the pressure goes above 5 bar, the script stops the pump and exits the loop.
+- While running, repeatedly checks:
+  - If the pump is on and the pressure has reached the configured **maximum**, it turns the pump **off**.
+  - If the pressure drops below the configured **minimum** and the pump is off, it turns the pump **on**.
+- Waits a short delay between iterations.
 
-  # Pressure
-  - platform: template
-    id: pressure_int
-    name: "Pressure"
-    accuracy_decimals: 2
-    lambda: !lambda |-
-      float pressure_v = id(pressure_v_int).state;
-      float psu_v = 5.0;
-      if (pressure_v > 0.54) {
-        return (pressure_v - 0.1 * psu_v) / (0.75 * psu_v) * 10.0;
-      } else {
-        return 0.0;
-      }
-    update_interval: 1s
-    filters:
-      - round: 2
-      - delta: 0.03
-```
+This creates a simple hysteresis around the target range (for example, 0.6–2.2 bar for drippers). The current configuration in [`irrigator-with-pump-2-controllers.yaml`](irrigator-with-pump-2-controllers.yaml) uses an RS485 (Modbus) sensor for accurate and noise-resistant readings; examples for 5V and 4–20 mA variants can be found in [Pressure sensors](PRESSURE-SENSORS.md) page.
 
 ## Simple Setup
 
@@ -181,22 +147,33 @@ This is a great starting point if you want a straightforward irrigation controll
 > In future, I plan on moving the automation part to ESP32, but for now, it works on the Home Assistant side
 
 
+## Winterization
+
+Everyone’s setup is different: local climate, hardware layout, and even what “winter” means can vary a lot. Where I am, winter can go down to around -25°C, so I have to be quite careful. You will need to decide what makes sense for your system, what you must do, and what you can safely skip.
+
+My winterization routine currently looks roughly like this:
+
+- Depressurize the system and clean the pump’s inlet filter.
+- Remove the suction pipe from the river and flush it with clean city water by using the pump to draw from a container.
+- Depressurize the system again. Disconnect the vacuum/suction pipe and thoroughly clean all parts that were in the water, with soap, brush, etc.. 
+- Clean the pump filter again.
+- Connect city water directly to the pump and start pumping. Manually open each valve in turn and flush until clean water comes out. Depressurize the system again and disconnect the pump.
+- Connect an air compressor via a [1/4" to air-compressor connector](https://s.click.aliexpress.com/e/_c3ELFpl3) and repeat the cycle of manually opening each valve, blowing out water until no more water is coming out.
+  - **Important: do not let rotor sprinklers “run” dry.** As soon as they only spray a mist instead of a normal water arc, stop immediately or you may damage the rotor.
+- Any removable and sensitive parts (like pressure sensor) are taken off.
+
+And that’s “basically” it for my case. After that, the system is effectively dry and depressurized.
 
 ## TODOs
 
-- [ ] Intro
 - [ ] Rain sensor
-- [x] Yaml example
-- [ ] Home Assistant automation
 - [ ] The math behind irrigation duration
-- [x] The math behind pressure sensor
+- [ ] Home Assistant automation
 - [ ] Home Assistant dashboard
-- [ ] Connection diagrams
 - [ ] References
 - [ ] The installation process
 - [ ] References for pipe sizing, cable sizing
 - [ ] Challanges
-- [ ] Winterization
 - [ ] Move the automation to ESP?
 - [ ] Integrate flow meter
 
